@@ -7,8 +7,11 @@ SRCDIR=src
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-$(BINDIR)/run: $(OBJDIR)/test.o
+$(BINDIR)/test: $(OBJDIR)/main.o $(OBJDIR)/grammar.o 
 	$(CC) -o $@ $^
+
+test: $(BINDIR)/test
+	$(BINDIR)/test
 
 clean:
 	rm -rf $(OBJDIR)/*
