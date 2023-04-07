@@ -10,9 +10,18 @@
 struct Grammar {
     std::vector<std::vector<int>> rules;
     std::map<std::string, int> symbol_table;
-    std::set<int> nonterminals;
+    std::map<int, std::string> id2sym;
+    std::set<int> nonterminals; 
 
-    std::vector<std::vector<int>> read_grammar(std::string);
+    void read_grammar(std::string);
+    void eliminate_left_recursion();
+    std::vector<std::vector<int>> get_rules(int);
+    std::vector<std::vector<int>> get_rules();
+    int get_symbol_id(const std::string &);
+
+    // DEBUG
+    void show();
+    void print_rule(std::vector<int>);
 };
 
 #endif
