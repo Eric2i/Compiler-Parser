@@ -1,2 +1,3 @@
-cond -> if E else S then S | if E else S
-E -> b
+A -> B b | a
+B -> C c | b
+C -> A d | f

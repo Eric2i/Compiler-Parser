@@ -11,12 +11,13 @@ This repository record my assignment progress, which focuses on building up a Pa
 ![img](imgs/alg-left_factoring1.png)
 ![img](imgs/alg-left_factoring2.png)
 
-
+- First Table
+![img](imgs/alg-build_first.png)
 
 ## TODO
 - [x] Rules input
 - [x] Elimination of left recursion
-- [ ] Left factoring
-- [ ] Build up FISRT
+- [x] Left factoring
+- [x] Build up FISRT
 - [ ] Build up FOLLOW
 - [ ] Build up parsing table (LL(1))

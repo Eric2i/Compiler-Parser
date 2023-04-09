@@ -8,9 +8,11 @@ int main() {
     struct Grammar g;
     vector<vector<int>> rules;
 
-    g.read_grammar("test/input/left_factoring.txt");
+    // g.read_grammar("test/input/first_nonrecursion.txt");
+    g.read_grammar("test/input/first.txt");
     g.eliminate_left_recursion();
     g.left_factoring();
+    g.build_first();
     g.show();
 
     return 0;

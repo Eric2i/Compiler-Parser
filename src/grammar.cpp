@@ -6,7 +6,7 @@
 using namespace std;
 
 int Grammar::insert_nonterminal(const string &s) {
-    cerr << "inserting nonterimal: " << s << '\n';
+    // cerr << "inserting nonterimal: " << s << '\n';
     // register new symbol
     int id = -(this->symbol_table.size());
     this->symbol_table[s] = id;
@@ -76,11 +76,15 @@ void Grammar::read_grammar(string filename) {
     // update nonterminal id 
     set<int> new_nonterminals;
     for(auto i: nonterminals) {
+        // cerr << "updating " << id2sym[i] << " " << i << "\n";
         symbol_table[id2sym[i]] = -i;
-        id2sym[-i] = id2sym[i]; id2sym.erase(i);
+        id2sym[-i] = id2sym[i]; if(i != -i) id2sym.erase(i);
         new_nonterminals.insert(-i);
+        // cerr << "to " << id2sym[-i] << " " << -i << "\n";
     }
     this->nonterminals = new_nonterminals;
+    // add <S> -> last nonterminal
+    this->rules.push_back({get_symbol_id("<S>"), *(++this->nonterminals.rbegin())});
 }
 
 vector<vector<int>> Grammar::get_rules(int head) {
@@ -100,7 +104,7 @@ vector<vector<int>> Grammar::get_rules() {
 void Grammar::eliminate_left_recursion() {
     for(auto Ai = this->nonterminals.begin(); Ai != this->nonterminals.end(); ++Ai) {
         int i = *Ai;
-        cerr << "Processing :" << id2sym[i] << "\n";
+        // cerr << "Processing :" << id2sym[i] << "\n";
         for(auto Aj = this->nonterminals.begin(); Aj != Ai; ++Aj) {
             int j = *Aj;
             /* replace Ai -> Aj \gamma with
@@ -109,19 +113,22 @@ void Grammar::eliminate_left_recursion() {
             */
             for(int k = 0; k < this->rules.size(); k++) {
                 auto rule = this->rules[k];
-                // print_rule(rule);
                 if(rule[0] == i && rule[1] == j) {
-                    cerr << "Before remove: " << this->rules.size() << "\n";
+                    // print_rule(rule);
+                    // cerr << "Before remove: " << this->rules.size() << "\n";
                     for(auto &d: this->get_rules(j)) {
                         vector<int> new_rule = {i};
                         new_rule.insert(new_rule.end(), d.begin() + 1, d.end());
                         new_rule.insert(new_rule.end(), rule.begin() + 2, rule.end());
                         this->rules.push_back(new_rule);
-                        cerr << "Adding one more rules!\n";
+                        // cerr << "Adding one more rules!\n";
                     }
                     // remove this.rules[k]
                     this->rules.erase(this->rules.begin() + k);
-                    cerr << "After update: " << this->rules.size() << "\n";
+                    // move k back one step
+                    k--;
+
+                    // cerr << "After update: " << this->rules.size() << "\n";
                 }
             }
         }
@@ -153,9 +160,9 @@ void Grammar::eliminate_left_recursion() {
                 rule.erase(rule.begin());
                 rule.erase(rule.begin());
                 // Ai' -> alpha Ai'
+                insert_nonterminal(id2sym[i] + "'");
                 rule.insert(rule.begin(), get_symbol_id(id2sym[i] + "'"));
                 rule.push_back(get_symbol_id(id2sym[i] + "'"));
-
                 // print_rule(rule);
             }
             // edit non_left_recursion
@@ -171,14 +178,14 @@ void Grammar::eliminate_left_recursion() {
         this->rules.insert(this->rules.end(), left_recursion.begin(), left_recursion.end());
         this->rules.insert(this->rules.end(), non_left_recursion.begin(), non_left_recursion.end());
         
-        show();
+        // show();
     }
-} 
+}
 
 void Grammar::left_factoring() {
     for(auto i =  nonterminals.rbegin(); i != nonterminals.rend(); ++i) {
         auto N = *i;
-        cerr << "scanning non-terminal: " << N << ", "<< id2sym[N] << '\n';
+        // cerr << "scanning non-terminal: " << N << ", "<< id2sym[N] << '\n';
         vector<int> cur_rules_idx;
         for(int i = 0; i < this->rules.size(); i++) {
             if(this->rules[i][0] == N) {
@@ -223,13 +230,87 @@ void Grammar::left_factoring() {
     }
 }
 
+void Grammar::build_first() {
+    set<int> terminals;
+    for(auto sym: symbol_table) {
+        int id = sym.second;
+        if(nonterminals.find(id) == nonterminals.end()) {
+            terminals.insert(id);
+        }
+    }
 
+    // Initialize FIRST sets for terminals
+    for (auto t : terminals) {
+        FIRST[t].insert(t);
+    }
+
+    // Initialize FIRST sets for nonterminals
+    for (auto nt : nonterminals) {
+        FIRST[nt] = std::set<int>();
+    }
+
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        // Iterate over all the rules
+        for (auto r : rules) {
+            int head = r[0];
+            bool head_eps = true;
+            // Compute FIRST set for the RHS of the rule
+            for (size_t i = 1; i < r.size(); i++) {
+                // If the symbol is a terminal, add it to FIRST set and break
+                if (terminals.count(r[i]) > 0) {
+                    if (FIRST[head].count(r[i]) == 0) {
+                        changed = true;
+                    }
+                    FIRST[head].insert(r[i]);
+                    head_eps = false;
+                    break;
+                }
+                // If the symbol is a nonterminal, add its FIRST set to FIRST set of the head symbol
+                for (auto f : FIRST[r[i]]) {
+                    if (f == get_symbol_id("<EPS>")) {
+                        continue;
+                    }
+                    if (FIRST[head].count(f) == 0) {
+                        changed = true;
+                    }
+                    FIRST[head].insert(f);
+                }
+                // If FIRST set of the nonterminal does not contain epsilon, break
+                if (FIRST[r[i]].count(get_symbol_id("<EPS>")) == 0) {
+                    head_eps = false;
+                    break;
+                }
+            }
+            // If RHS can derive epsilon, add epsilon to FIRST set of head symbol
+            if (head_eps) {
+                if (FIRST[head].count(get_symbol_id("<EPS>")) == 0) {
+                    changed = true;
+                }
+                FIRST[head].insert(get_symbol_id("<EPS>"));
+            }
+        }
+    }
+}
+
+void build_follow() {
+    ;
+}
+
+void build_parsing_table() {
+    ;
+}
 
 // DEBUG
 void Grammar::show() {
     // output a horizontal line using =
     auto print_line = []() {
         for(int i = 0; i < 80; i++) cerr << "=";
+        cerr << "\n";
+    };
+    auto print_section = []() {
+        for(int i = 0; i < 40; i++) cerr << "+";
         cerr << "\n";
     };
 
@@ -239,17 +320,17 @@ void Grammar::show() {
     for(auto &p: this->symbol_table) {
         // p: first -> string, second -> id
         if(nonterminals.find(p.second) != nonterminals.end() || p.second == 0)
-            cerr << "(N)" << p.first << ": " << p.second << "\n";
+            cerr << "(Non)" << p.first << ": " << p.second << "\n";
         else 
-            cerr << "(T)" << p.first << ": " << p.second << "\n";
-    }
+            cerr << "(Ter)" << p.first << ": " << p.second << "\n";
+    }print_section();
 
     // output rules with id replaced by symbols using id2sym
     cerr << "RULES:\n";
     for(auto &rule: this->rules) {
         bool isFirst = true;
         for(auto &i: rule) {
-            
+
             cerr << id2sym[i] 
             // << "[" << i << "]"
             ;
@@ -257,7 +338,21 @@ void Grammar::show() {
             if(isFirst) cout << "->", isFirst = false;
         }
         cerr << "\n";
+    }print_section();
+
+    cerr << "FIRST:\n";
+    for(auto &p: this->FIRST) {
+        cerr << id2sym[p.first] << ": "
+        // << "[" << p.first << "]: "
+        ;
+        for(auto &i: p.second) {
+            cerr << id2sym[i]
+            // << "[" << i << "]"
+            ;
+        }
+        cerr << "\n";
     }
+
     print_line();
 }
 

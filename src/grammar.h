@@ -12,10 +12,15 @@ struct Grammar {
     std::map<std::string, int> symbol_table;
     std::map<int, std::string> id2sym;
     std::set<int> nonterminals; 
+    std::map<int, std::set<int>> FIRST;
 
     void read_grammar(std::string);
     void eliminate_left_recursion();
     void left_factoring();
+    void build_first();
+    void build_follow();
+    void build_parsing_table();
+
     std::vector<std::vector<int>> get_rules(int);
     std::vector<std::vector<int>> get_rules();
     int insert_nonterminal(const std::string &);
