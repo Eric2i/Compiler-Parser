@@ -15,8 +15,11 @@ struct Grammar {
 
     void read_grammar(std::string);
     void eliminate_left_recursion();
+    void left_factoring();
     std::vector<std::vector<int>> get_rules(int);
     std::vector<std::vector<int>> get_rules();
+    int insert_nonterminal(const std::string &);
+    int insert_terminal(const std::string &);
     int get_symbol_id(const std::string &);
 
     // DEBUG
