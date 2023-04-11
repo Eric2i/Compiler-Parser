@@ -5,14 +5,13 @@
 using namespace std;
 
 int main() {
-    struct Grammar g;
+    Grammar g("test/input/first.txt");
     vector<vector<int>> rules;
 
-    // g.read_grammar("test/input/first_nonrecursion.txt");
-    g.read_grammar("test/input/first.txt");
     g.eliminate_left_recursion();
     g.left_factoring();
     g.build_first();
+    g.build_follow();
     g.show();
 
     return 0;

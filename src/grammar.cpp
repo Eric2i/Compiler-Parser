@@ -5,23 +5,23 @@
 
 using namespace std;
 
+const string EOI = "$";
+const string EPS = "<EPS>";
+
 int Grammar::insert_nonterminal(const string &s) {
-    // cerr << "inserting nonterimal: " << s << '\n';
-    // register new symbol
+    // register new symbol, with id <= 0
     int id = -(this->symbol_table.size());
     this->symbol_table[s] = id;
     this->id2sym[id] = s;
     this->nonterminals.insert(id);
-    // cerr << "with returned " << id << "\n";
     return id;
 }
 
 int Grammar::insert_terminal(const string &s) {
-    // register new symbol
+    // register new symbol, with id > 0
     int id = this->symbol_table.size();
     this->symbol_table[s] = id;
     this->id2sym[id] = s;
-    // cerr << "with returned " << id << "\n";
     return id;
 }
 
@@ -36,11 +36,11 @@ int Grammar::get_symbol_id(const string &s) {
     }
 }
 
-void Grammar::read_grammar(string filename) {
+Grammar::Grammar(string filename) {
     ifstream file(filename);
     
-    insert_nonterminal("<S>"); // register <S> as the start symbol
     insert_terminal("<EPS>"); // register <EPS> as a special terminal symbol
+    insert_terminal("$"); // register $ as end of input symbol
 
     string line;
     while(getline(file, line)) {
@@ -83,8 +83,8 @@ void Grammar::read_grammar(string filename) {
         // cerr << "to " << id2sym[-i] << " " << -i << "\n";
     }
     this->nonterminals = new_nonterminals;
-    // add <S> -> last nonterminal
-    this->rules.push_back({get_symbol_id("<S>"), *(++this->nonterminals.rbegin())});
+    // specify <S>
+    this->S = *nonterminals.rbegin();
 }
 
 vector<vector<int>> Grammar::get_rules(int head) {
@@ -254,48 +254,96 @@ void Grammar::build_first() {
         changed = false;
         // Iterate over all the rules
         for (auto r : rules) {
-            int head = r[0];
-            bool head_eps = true;
+            int lhs = r[0];
+            bool exists_eps = true;
             // Compute FIRST set for the RHS of the rule
             for (size_t i = 1; i < r.size(); i++) {
                 // If the symbol is a terminal, add it to FIRST set and break
                 if (terminals.count(r[i]) > 0) {
-                    if (FIRST[head].count(r[i]) == 0) {
+                    if (FIRST[lhs].count(r[i]) == 0) {
                         changed = true;
                     }
-                    FIRST[head].insert(r[i]);
-                    head_eps = false;
+                    FIRST[lhs].insert(r[i]);
+                    exists_eps = false;
                     break;
                 }
-                // If the symbol is a nonterminal, add its FIRST set to FIRST set of the head symbol
+                // If the symbol is a nonterminal
+                // add its FIRST set except {EPS} to FIRST set of the head symbol
                 for (auto f : FIRST[r[i]]) {
                     if (f == get_symbol_id("<EPS>")) {
                         continue;
                     }
-                    if (FIRST[head].count(f) == 0) {
+                    if (FIRST[lhs].count(f) == 0) {
                         changed = true;
                     }
-                    FIRST[head].insert(f);
+                    FIRST[lhs].insert(f);
                 }
                 // If FIRST set of the nonterminal does not contain epsilon, break
                 if (FIRST[r[i]].count(get_symbol_id("<EPS>")) == 0) {
-                    head_eps = false;
+                    exists_eps = false;
                     break;
                 }
             }
             // If RHS can derive epsilon, add epsilon to FIRST set of head symbol
-            if (head_eps) {
-                if (FIRST[head].count(get_symbol_id("<EPS>")) == 0) {
+            if (exists_eps) {
+                if (FIRST[lhs].count(get_symbol_id("<EPS>")) == 0) {
                     changed = true;
                 }
-                FIRST[head].insert(get_symbol_id("<EPS>"));
+                FIRST[lhs].insert(get_symbol_id("<EPS>"));
             }
         }
     }
 }
 
-void build_follow() {
-    ;
+void Grammar::build_follow() {
+    // Initialize follow sets
+    for (int id : nonterminals) {
+        FOLLOW[id] = {};
+    }
+    FOLLOW[S].insert(get_symbol_id(EOI)); // Follow of start symbol is $
+
+    // Iterate until all follow sets are stable(unchanged)
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        // Iterate over all rules
+        for (auto& rule : rules) {
+            int A = rule[0];
+            for (int i = 1; i < rule.size(); i++) {
+                int B = rule[i];
+                if (nonterminals.count(B)) {
+                    // Add first(beta) to follow(B) for each beta in C1 C2 ... Ck
+                    int j = i + 1;
+                    bool epsilon = true;
+                    while (j < rule.size() && epsilon) {
+                        int C = rule[j];
+                        for (int c : FIRST[C]) {
+                            if (c != get_symbol_id(EPS)) {
+                                if (FOLLOW[B].insert(c).second) {
+                                    changed = true;
+                                }
+                            } else {
+                                epsilon = true;
+                            }
+                        }
+                        if (FIRST[C].count(get_symbol_id(EPS))) {
+                            j++;
+                        } else {
+                            epsilon = false;
+                        }
+                    }
+                    // If epsilon in first(beta) for all beta in C1 C2 ... Ck
+                    if (epsilon) {
+                        for (int c : FOLLOW[A]) {
+                            if (FOLLOW[B].insert(c).second) {
+                                changed = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 void build_parsing_table() {
@@ -342,6 +390,19 @@ void Grammar::show() {
 
     cerr << "FIRST:\n";
     for(auto &p: this->FIRST) {
+        cerr << id2sym[p.first] << ": "
+        // << "[" << p.first << "]: "
+        ;
+        for(auto &i: p.second) {
+            cerr << id2sym[i]
+            // << "[" << i << "]"
+            ;
+        }
+        cerr << "\n";
+    }print_section();
+
+    cerr << "FOLLOW:\n";
+    for(auto &p: this->FOLLOW) {
         cerr << id2sym[p.first] << ": "
         // << "[" << p.first << "]: "
         ;

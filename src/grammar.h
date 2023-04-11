@@ -7,19 +7,24 @@
 #include <string>
 #include <algorithm>
 
-struct Grammar {
-    std::vector<std::vector<int>> rules;
-    std::map<std::string, int> symbol_table;
-    std::map<int, std::string> id2sym;
-    std::set<int> nonterminals; 
-    std::map<int, std::set<int>> FIRST;
-
-    void read_grammar(std::string);
-    void eliminate_left_recursion();
-    void left_factoring();
-    void build_first();
-    void build_follow();
-    void build_parsing_table();
+class Grammar {
+    private:
+    int S;                                      // S
+    std::vector<std::vector<int>> rules;        // P
+    std::map<std::string, int> symbol_table;    // N + T
+    std::map<int, std::string> id2sym;          // {N + T} -> {idx}
+    std::set<int> nonterminals;                 // N
+    std::map<int, std::set<int>> FIRST;         // FIRST set
+    std::map<int, std::set<int>> FOLLOW;        // FOLLOW set
+    std::map<int, std::map<int, int>> parsing_table; // parsing table
+    
+    public:
+    Grammar(std::string);                       // Initialization
+    void eliminate_left_recursion();            // eliminate left recursion
+    void left_factoring();                      // eliminate left factors
+    void build_first();                          // build FIRST set 
+    void build_follow();                        // build FOLLOW set
+    void build_parsing_table();                 // build parsing table
 
     std::vector<std::vector<int>> get_rules(int);
     std::vector<std::vector<int>> get_rules();
