@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <stack>
 
 using namespace std;
 
@@ -102,9 +103,13 @@ vector<vector<int>> Grammar::get_rules() {
 }
 
 void Grammar::eliminate_left_recursion() {
+    auto check = [&]() {
+        return this->symbol_table.size() == this->id2sym.size();
+    };
+
     for(auto Ai = this->nonterminals.begin(); Ai != this->nonterminals.end(); ++Ai) {
         int i = *Ai;
-        // cerr << "Processing :" << id2sym[i] << "\n";
+        // cerr << "Processing: " << id2sym[i] << "\n";
         for(auto Aj = this->nonterminals.begin(); Aj != Ai; ++Aj) {
             int j = *Aj;
             /* replace Ai -> Aj \gamma with
@@ -160,9 +165,11 @@ void Grammar::eliminate_left_recursion() {
                 rule.erase(rule.begin());
                 rule.erase(rule.begin());
                 // Ai' -> alpha Ai'
-                insert_nonterminal(id2sym[i] + "'");
-                rule.insert(rule.begin(), get_symbol_id(id2sym[i] + "'"));
-                rule.push_back(get_symbol_id(id2sym[i] + "'"));
+                string new_nonterminal = id2sym[i] + "'";
+                if(symbol_table.find(new_nonterminal) == symbol_table.end()) insert_nonterminal(new_nonterminal); // insert new nonterminal only when not exists
+                rule.insert(rule.begin(), get_symbol_id(new_nonterminal));
+                rule.push_back(get_symbol_id(new_nonterminal));
+                assert(check());
                 // print_rule(rule);
             }
             // edit non_left_recursion
@@ -352,13 +359,85 @@ void Grammar::build_parsing_table() {
         for(int t: FIRST[rules[r][1]]) {
             if(t != get_symbol_id(EPS)) {
                 parsing_table[{nt, t}] = r;
+                // cerr << "inserting " << nt << id2sym[nt] << " " << t << " " << r << "\n";
             } else {
                 for(int t: FOLLOW[nt]) {
                     parsing_table[{nt, t}] = r;
+                    // cerr << "inserting " << nt << " " << t << " " << r << "\n";
                 }
             }
         }
     }
+}
+
+bool Grammar::parse(vector<string> &input) {
+    stack<int> stk;
+    stk.push(get_symbol_id(EOI));
+    stk.push(S);
+
+    input.push_back(EOI);
+
+    for(int i = 0; i < input.size(); i++) {
+        // output stk
+        // cerr << "Stack: ";
+        // stack<int> tmp = stk;
+        // while(!tmp.empty()) {
+        //     cerr << id2sym[tmp.top()] << " ";
+        //     tmp.pop();
+        // }
+        // cerr << "\n";
+        // cerr << "input: ";
+        // for(int j = i; j < input.size(); j++) cerr << input[j] << " ";
+        // cerr << "\n";
+
+
+        int symbol = stk.top();
+        int id = get_symbol_id(input[i]);
+        if(nonterminals.find(symbol) == nonterminals.end()) {
+            // symbol is a terminal symbol
+            if(symbol == id) {
+                stk.pop();
+            } else {
+                cerr << "Error: \n\t" << input[i] << " is not expected at " << i << "\n";
+                cerr << "\tSince we are expecting " << id2sym[symbol] << "\n";
+                return false;
+            }
+        } else if(parsing_table.count({symbol, id}) == 0) {
+            cerr << "Error: \n\t" << input[i] << " is not expected at " << i << "\n";
+            cerr << "\tSince we have no prediction when " <<  input[i] << " follows " << id2sym[symbol] << "\n";
+            // try error recovery
+            // bool foundReplacement = false;
+            // for(auto recovery: symbol_table) {
+            //     // if recovery is not a nonterminal
+            //     if(nonterminals.find(recovery.second) == nonterminals.end()) {
+            //         if(parsing_table.count({symbol, recovery.second}) != 0) {
+            //             cerr << "\tTry replace with " << input[i] << " with " << recovery.first << "\n";
+            //             input[i] = recovery.first;
+            //             --i; // reprocess the current input
+            //             foundReplacement = true;
+            //             break;
+            //         }
+            //     }
+            // }
+            // if(!foundReplacement) 
+            return false;
+        } else {
+            int prediction = parsing_table[{symbol, id}];
+
+            stk.pop();
+            // push rules[action]-rhs to stk in reversed order
+            for(int j = rules[prediction].size() - 1; j > 0; j--) {
+                if(get_symbol_id(EPS) != rules[prediction][j]) 
+                    // ignore epsilon  
+                    stk.push(rules[prediction][j]);
+            }
+            --i;
+        }
+    }
+
+    // cerr << "Input Buffer processing complete!" << '\n';
+    if(stk.empty()) return true;
+    else return false;
 }
 
 // DEBUG
@@ -383,6 +462,12 @@ void Grammar::show() {
         else 
             cerr << "(Ter)" << p.first << ": " << p.second << "\n";
     }print_section();
+
+    // if(symbol_table.size() != id2sym.size()) {
+    //     cerr << "size of symbol_table and id2sym = " << symbol_table.size() << " " << id2sym.size() << "\n";
+    //     cerr << "symbol_table sync with id2sym failed!";
+    //     exit(1);
+    // }
 
     // output rules with id replaced by symbols using id2sym
     cerr << "RULES:\n";
@@ -429,7 +514,10 @@ void Grammar::show() {
     for(auto &p: this->parsing_table) {
         cerr << "(" << id2sym[p.first.first] << "," 
         << id2sym[p.first.second] << ") -> "
+        // cerr << "(" << p.first.first << "," 
+        // << p.first.second << ") -> "
         << p.second << ": ";
+
         print_rule(rules[p.second]);
     }
 

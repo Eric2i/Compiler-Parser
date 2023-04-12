@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <fstream>
 #include "grammar.h"
 
 using namespace std;
@@ -14,6 +15,15 @@ int main() {
     g.build_follow();
     g.build_parsing_table();
     g.show();
+
+    ifstream fin("test/input/tokens.txt");
+    vector<string> tokens;
+    string token;
+    while(fin >> token) {
+        tokens.push_back(token);
+    }
+    if(g.parse(tokens)) cout << "Match!";
+    else cout << "Mismatch!";
 
     return 0;
 }

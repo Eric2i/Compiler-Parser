@@ -33,4 +33,5 @@ This repository record my assignment progress, which focuses on building up a Pa
 - [x] Build up FISRT
 - [x] Build up FOLLOW
 - [x] Build up parsing table (LL(1))
-- [ ] Table-driven predictive parsing
+- [x] Table-driven predictive parsing
+- [ ] Error Recovery?

@@ -26,6 +26,7 @@ class Grammar {
     void build_first();                          // build FIRST set 
     void build_follow();                        // build FOLLOW set
     void build_parsing_table();                 // build parsing table
+    bool parse(std::vector<std::string>&);
 
     std::vector<std::vector<int>> get_rules(int);
     std::vector<std::vector<int>> get_rules();
