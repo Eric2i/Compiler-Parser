@@ -6,6 +6,7 @@
 #include <set>
 #include <string>
 #include <algorithm>
+#include <utility>
 
 class Grammar {
     private:
@@ -16,8 +17,8 @@ class Grammar {
     std::set<int> nonterminals;                 // N
     std::map<int, std::set<int>> FIRST;         // FIRST set
     std::map<int, std::set<int>> FOLLOW;        // FOLLOW set
-    std::map<int, std::map<int, int>> parsing_table; // parsing table
-    
+    std::map<std::pair<int, int>, int> parsing_table; // parsing table
+
     public:
     Grammar(std::string);                       // Initialization
     void eliminate_left_recursion();            // eliminate left recursion

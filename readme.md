@@ -14,10 +14,23 @@ This repository record my assignment progress, which focuses on building up a Pa
 - First Table
 ![img](imgs/alg-build_first.png)
 
+- Follow Table
+![img](imgs/alg-build_follow1.png)
+![img](imgs/alg-build_follow2.png)
+
+- Parsing Table
+![img](imgs/alg-build_parsing_table1.png)
+![img](imgs/alg-build_parsing_table2.png)
+
+- Table-driven predictive parsing
+![img](imgs/alg-parsing1.png)
+![img](imgs/alg-parsing2.png)
+
 ## TODO
 - [x] Rules input
 - [x] Elimination of left recursion
 - [x] Left factoring
 - [x] Build up FISRT
-- [ ] Build up FOLLOW
-- [ ] Build up parsing table (LL(1))
+- [x] Build up FOLLOW
+- [x] Build up parsing table (LL(1))
+- [ ] Table-driven predictive parsing

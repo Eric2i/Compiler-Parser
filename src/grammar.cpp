@@ -346,8 +346,19 @@ void Grammar::build_follow() {
     }
 }
 
-void build_parsing_table() {
-    ;
+void Grammar::build_parsing_table() {
+    for(int r = 0; r < rules.size(); r++) {
+        int nt = rules[r][0];
+        for(int t: FIRST[rules[r][1]]) {
+            if(t != get_symbol_id(EPS)) {
+                parsing_table[{nt, t}] = r;
+            } else {
+                for(int t: FOLLOW[nt]) {
+                    parsing_table[{nt, t}] = r;
+                }
+            }
+        }
+    }
 }
 
 // DEBUG
@@ -412,6 +423,14 @@ void Grammar::show() {
             ;
         }
         cerr << "\n";
+    }print_section();
+
+    cerr << "Parsing Table:\n";
+    for(auto &p: this->parsing_table) {
+        cerr << "(" << id2sym[p.first.first] << "," 
+        << id2sym[p.first.second] << ") -> "
+        << p.second << ": ";
+        print_rule(rules[p.second]);
     }
 
     print_line();
