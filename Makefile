@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-Wall -std=c++17
+CFLAGS=-Wall -std=c++17  -Wno-sign-compare
 BINDIR=bin
 OBJDIR=obj
 SRCDIR=src
@@ -7,11 +7,11 @@ SRCDIR=src
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-$(BINDIR)/test: $(OBJDIR)/main.o $(OBJDIR)/grammar.o 
+$(BINDIR)/exec: $(OBJDIR)/main.o $(OBJDIR)/grammar.o 
 	$(CC) -o $@ $^
 
-test: $(BINDIR)/test
-	$(BINDIR)/test
+test: $(BINDIR)/exec
+	$(BINDIR)/exec
 
 clean:
 	rm -rf $(OBJDIR)/*
