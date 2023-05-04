@@ -3,38 +3,20 @@
 #include <fstream>
 #include <sstream>
 #include <stack>
+#include <cassert>
 
 using namespace std;
 
 const string EOI = "$";
 const string EPS = "<EPS>";
 
-int Grammar::insert_nonterminal(const string &s) {
-    // register new symbol, with id <= 0
-    int id = -(this->symbol_table.size());
-    this->symbol_table[s] = id;
-    this->id2sym[id] = s;
-    this->nonterminals.insert(id);
-    return id;
+bool item_t::operator==(const item_t &other) const {
+    return rule_id == other.rule_id && dot_pos == other.dot_pos;
 }
 
-int Grammar::insert_terminal(const string &s) {
-    // register new symbol, with id > 0
-    int id = this->symbol_table.size();
-    this->symbol_table[s] = id;
-    this->id2sym[id] = s;
-    return id;
-}
-
-// for non-terminal symbol only
-int Grammar::get_symbol_id(const string &s) {
-    // cerr << "looking up symol:" << s;
-    auto iter = this->symbol_table.find(s);
-    if (iter == this->symbol_table.end()) {
-        return insert_terminal(s);
-    } else {
-        return iter->second;
-    }
+bool item_t::operator<(const item_t &other) const {
+    if(rule_id != other.rule_id) return rule_id < other.rule_id;
+    return dot_pos < other.dot_pos;
 }
 
 Grammar::Grammar(string filename) {
@@ -86,6 +68,34 @@ Grammar::Grammar(string filename) {
     this->nonterminals = new_nonterminals;
     // specify <S>
     this->S = *nonterminals.rbegin();
+}
+
+int Grammar::insert_nonterminal(const string &s) {
+    // register new symbol, with id <= 0
+    int id = -(this->symbol_table.size());
+    this->symbol_table[s] = id;
+    this->id2sym[id] = s;
+    this->nonterminals.insert(id);
+    return id;
+}
+
+int Grammar::insert_terminal(const string &s) {
+    // register new symbol, with id > 0
+    int id = this->symbol_table.size();
+    this->symbol_table[s] = id;
+    this->id2sym[id] = s;
+    return id;
+}
+
+int Grammar::get_symbol_id(const string &s) {
+    // cerr << "looking up symol:" << s;
+    auto iter = this->symbol_table.find(s);
+    if (iter == this->symbol_table.end()) {
+        // insert new symbol as terminal symbol by default
+        return insert_terminal(s);
+    } else {
+        return iter->second;
+    }
 }
 
 vector<vector<int>> Grammar::get_rules(int head) {
@@ -406,21 +416,21 @@ bool Grammar::parse(vector<string> &input) {
             cerr << "Error: \n\t" << input[i] << " is not expected at " << i << "\n";
             cerr << "\tSince we have no prediction when " <<  input[i] << " follows " << id2sym[symbol] << "\n";
             // try error recovery
-            // bool foundReplacement = false;
-            // for(auto recovery: symbol_table) {
-            //     // if recovery is not a nonterminal
-            //     if(nonterminals.find(recovery.second) == nonterminals.end()) {
-            //         if(parsing_table.count({symbol, recovery.second}) != 0) {
-            //             cerr << "\tTry replace with " << input[i] << " with " << recovery.first << "\n";
-            //             input[i] = recovery.first;
-            //             --i; // reprocess the current input
-            //             foundReplacement = true;
-            //             break;
-            //         }
-            //     }
-            // }
-            // if(!foundReplacement) 
-            return false;
+            bool foundReplacement = false;
+            for(auto recovery: symbol_table) {
+                // if recovery is not a nonterminal
+                if(nonterminals.find(recovery.second) == nonterminals.end()) {
+                    if(parsing_table.count({symbol, recovery.second}) != 0) {
+                        cerr << "\tTry replace with " << input[i] << " with " << recovery.first << "\n";
+                        input[i] = recovery.first;
+                        --i; // reprocess the current input
+                        foundReplacement = true;
+                        break;
+                    }
+                }
+            }
+            if(!foundReplacement) 
+                return false;
         } else {
             int prediction = parsing_table[{symbol, id}];
 
@@ -438,6 +448,92 @@ bool Grammar::parse(vector<string> &input) {
     // cerr << "Input Buffer processing complete!" << '\n';
     if(stk.empty()) return true;
     else return false;
+}
+
+void Grammar::augmentate() {
+    insert_nonterminal("<S>");
+    rules.push_back({get_symbol_id("<S>"), *(nonterminals.rbegin())});
+    return;
+    show();
+}
+
+set<item_t> Grammar::closure(set<item_t> items) {
+    // prepare a stack to store all item in items
+    stack<item_t> stk;
+    for(item_t item: items) {
+        stk.push(item);
+    }
+    // implement item closure operation
+    set<item_t> closure;
+    while(!stk.empty()) {
+        item_t item = stk.top(); stk.pop();
+        
+        // cerr << "Having Item: "; print_item(item);
+
+        closure.insert(item);
+        int dot = item.dot_pos;
+        if(dot == rules[item.rule_id].size()) {
+            // dot exists at the end of the production -> reduce item
+            // cerr << "dot exists at the end of the production!\n";
+            closure.insert(item);
+        } 
+        else if(dot < rules[item.rule_id].size()) {
+            // dot exists in the middle of the production -> basic item / initial item
+            int next_symbol = rules[item.rule_id][dot];
+            if(nonterminals.find(next_symbol) != nonterminals.end()) {
+                // nonterminal after the dot
+                for(int r = 0; r < rules.size(); r++) {
+                    if(rules[r][0] == next_symbol) {
+                        // generate new item
+                        item_t new_item(r, 1);
+                        if(closure.find(new_item) == closure.end())stk.push(new_item);
+                    }
+                }
+                // cerr << "Find nonterminal after the dot\n";
+                closure.insert(item);
+            } else {
+                // terminal after the dot
+                // cerr << "Find terminal after the dot\n";
+                closure.insert(item);
+            }
+        }
+    }
+    // cerr << "================================================================================\n";
+    // for(auto &item: closure) {
+    //     print_item(item);
+    // }
+    // cerr << "================================================================================\n";
+    return closure;
+}
+
+std::set<item_t> Grammar::go(std::set<item_t>I, int X) {
+    std::set<item_t> J;
+    for(item_t item: I) {
+        if(this->rules[item.rule_id][item.dot_pos] == X) {
+            J.insert(item_t(item.rule_id, item.dot_pos + 1));
+        }
+    }
+    J = this->closure(J);
+
+    cerr << "================================================================================\n";
+    for(auto each: J) {
+        print_item(each);
+    }
+    cerr << "================================================================================\n";
+
+    return J;
+}
+
+void Grammar::build_states() {
+    ;
+}
+
+void Grammar::build_goto() {
+    ;
+}
+
+void Grammar::build_action() {
+    ;
 }
 
 // DEBUG
@@ -534,4 +630,17 @@ void Grammar::print_rule(vector<int> r) {
         // else cout << " ";
     }
     cout << endl;
+}
+
+void Grammar::print_item(const item_t &item) {
+    for(int i = 0; i < this->rules[item.rule_id].size(); i++) {
+        if(i == item.dot_pos) {
+            cerr << ".";
+        }
+        cerr << id2sym[rules[item.rule_id][i]];
+        if(i == 0) cerr << "->";
+        else cerr << " ";
+    }
+    if(item.dot_pos == this->rules[item.rule_id].size()) cerr << ".";
+    cerr << "\n";
 }
