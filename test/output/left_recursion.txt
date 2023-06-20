@@ -1,0 +1,9 @@
+9 SIMPLE RULES IN TOTAL:
+F -> (E)
+F -> id
+T' -> <EPS>
+T' -> *FT'
+E -> +TE'
+E' -> TE'
+E' -> <EPS>
+T' -> FT'

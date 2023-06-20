@@ -1,3 +1,0 @@
-A -> B b | a
-B -> C c | b
-C -> A d | f

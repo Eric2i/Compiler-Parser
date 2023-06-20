@@ -1,5 +1,0 @@
-E -> T E'
-E' -> + T E' | <EPS>
-T -> F T'
-T' -> * F T' | <EPS>
-F -> ( E ) | id
