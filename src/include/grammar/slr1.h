@@ -18,5 +18,7 @@ class SLR1Parser : public LR0Parser {
   SLR1Parser(path rules_file_path); // constructor: read rules from file
   void build_first();                     // build FIRST set
   void build_follow();                    // build FOLLOW set
+  bool parse(std::vector<std::string>); // DFA-driven parsing
 };
+
 }

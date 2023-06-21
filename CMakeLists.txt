@@ -1,16 +1,38 @@
 cmake_minimum_required(VERSION 3.24)
 project(Parser)
+set(CMAKE_CXX_STANDARD 11)
 
-set(CMAKE_CXX_STANDARD 17)
+# Add source files
+set(SOURCES
+        LL1.cpp
+        LR0.cpp
+        SLR1.cpp
+        main.cpp
+        )
 
-add_library(${PROJECT_NAME} src/grammar/grammar.cpp src/include/grammar/grammar.h src/include/grammar/ll1.h src/include/grammar/lr0.h src/grammar/ll1.cc src/grammar/lr0.cc src/include/common/common.h src/common/common.cc src/include/grammar/slr1.h src/grammar/slr1.cc)
+# Add library files
+set(LIBRARY_SOURCES
+        src/grammar/grammar.cc
+        src/grammar/ll1.cc
+        src/grammar/lr0.cc
+        src/grammar/slr1.cc
+        src/common/common.cc
+        )
 
-add_executable(LL1_Parser LL1.cpp)
-add_executable(LR0_Parser LR0.cpp)
-add_executable(SLR1_Parser SLR1.cpp)
+# Add include directories
+set(INCLUDE_DIRS
+        src/include/third_lib
+        src/include/grammar
+        src/include/common
+        )
 
-target_link_libraries(LL1_Parser ${PROJECT_NAME})
-target_link_libraries(LR0_Parser ${PROJECT_NAME})
-target_link_libraries(SLR1_Parser ${PROJECT_NAME})
+# Build library
+add_library(${PROJECT_NAME} ${LIBRARY_SOURCES})
+target_include_directories(${PROJECT_NAME} PUBLIC ${INCLUDE_DIRS})
 
-
+# Build executables
+foreach (SOURCE_FILE ${SOURCES})
+    get_filename_component(EXECUTABLE_NAME ${SOURCE_FILE} NAME_WE)
+    add_executable(${EXECUTABLE_NAME} ${SOURCE_FILE})
+    target_link_libraries(${EXECUTABLE_NAME} ${PROJECT_NAME})
+endforeach ()

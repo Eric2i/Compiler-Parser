@@ -147,6 +147,7 @@ bool LR0Parser::show_dfa() {
     std::cerr << "++++++++++\n\n";
   }
   std::cerr << "================================================================================\n";
+  return true;
 }
 
 bool LR0Parser::lr0_dfa_items_check(std::set<item_t> items) {

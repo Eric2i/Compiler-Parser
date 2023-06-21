@@ -11,7 +11,7 @@ const std::string kEps = "<EPS>";
 
 void SLR1Parser::build_first() {
   std::set<int> terminals;
-  for (const auto& sym : symbol_table) {
+  for (const auto &sym : symbol_table) {
     int id = sym.second;
     if (nonterminals.find(id) == nonterminals.end()) {
       terminals.insert(id);
@@ -80,7 +80,8 @@ void SLR1Parser::build_follow() {
     FOLLOW[id] = {};
   }
   FOLLOW[S].insert(get_symbol_id(kEoi)); // Follow of start symbol is $
-  std::cerr << "S:" << id2sym[S] << "has follow:"; for(auto f: FOLLOW[-2]) std::cerr << id2sym[f] << " "; std::cerr << std::endl;
+  for (auto f : FOLLOW[-2]) std::cerr << id2sym[f] << " ";
+  std::cerr << std::endl;
 
   // Iterate until all follow sets are stable(unchanged)
   bool changed = true;
@@ -127,5 +128,77 @@ void SLR1Parser::build_follow() {
 }
 
 SLR1Parser::SLR1Parser(path rules_file_path) : LR0Parser(rules_file_path) {}
+
+bool SLR1Parser::parse(std::vector<std::string> symbols) {
+  DFANode *cur_node = this->dfa.get_start();
+  std::stack<DFANode *> dfa_node_ptr_stk;
+  dfa_node_ptr_stk.push(cur_node);
+
+  int i = 0;
+  while (i < symbols.size() && !dfa_node_ptr_stk.empty()) {
+    auto symbol = symbols[i];
+    if (!inSymbolTable(symbol)) {
+      std::cerr << "Unknown Symbol Detected: " << symbol << "\n";
+      return false;
+    }
+    cur_node = dfa_node_ptr_stk.top();
+
+    if (cur_node->transit(symbol) != nullptr) {
+      // shift operation
+      dfa_node_ptr_stk.push(cur_node->transit(symbol));
+      i++;
+    } else {
+      // reduce operation
+      int reduce_rule_id;
+      for (auto it = cur_node->get_items().begin(); it != cur_node->get_items().end(); it++) {
+        if (FOLLOW[this->rules[it->rule_id][0]].count(symbol_table[symbol]) > 0) {
+          reduce_rule_id = it->rule_id;
+          break;
+        }
+      }
+
+      auto reduce_rule_len = this->rules[reduce_rule_id].size() - 1; // length of RHS
+      if (dfa_node_ptr_stk.size() < reduce_rule_id + 1) {
+        std::cerr << "Syntax Error: Unexpected Symbol: " << symbol << "\n";
+        return false;
+      }
+      for (int j = 0; j < reduce_rule_len; j++) {
+        dfa_node_ptr_stk.pop();
+      }
+
+      cur_node = dfa_node_ptr_stk.top();
+      dfa_node_ptr_stk.push(cur_node->transit(this->id2sym[this->rules[reduce_rule_id][0]]));
+    }
+    std::cerr << i << " : " << symbols[i] << std::endl;
+  }
+
+  std::cerr << "ready for final reduction\n";
+
+  while (!dfa_node_ptr_stk.empty()) {
+    item_t item = *(dfa_node_ptr_stk.top()->get_items().begin());
+
+    int reduce_rule_id;
+    for (auto it = cur_node->get_items().begin(); it != cur_node->get_items().end(); it++) {
+      if (FOLLOW[this->rules[it->rule_id][0]].count(symbol_table[kEoi]) > 0) {
+        reduce_rule_id = it->rule_id;
+        break;
+      }
+    }
+
+    int reduce_rule_len = this->rules[reduce_rule_id].size() - 1; // length of RHS
+    for (int j = 0; j < reduce_rule_len; j++) {
+      dfa_node_ptr_stk.pop();
+    }
+
+    cur_node = dfa_node_ptr_stk.top();
+
+    if (cur_node->get_id() == 0 && this->id2sym[this->rules[reduce_rule_id][0]] == "<S>")
+      return true;
+
+    dfa_node_ptr_stk.push(cur_node->transit(this->id2sym[this->rules[reduce_rule_id][0]]));
+  }
+
+  return false;
+}
 
 }
