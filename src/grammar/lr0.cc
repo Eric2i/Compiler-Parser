@@ -188,7 +188,7 @@ bool LR0Parser::parse(std::vector<std::string> symbols) {
 
       int reduce_rule_id = item.rule_id;
       int reduce_rule_len = this->rules[reduce_rule_id].size() - 1; // length of RHS
-      if (dfa_node_ptr_stk.size() < reduce_rule_id + 1) {
+      if (dfa_node_ptr_stk.size() < reduce_rule_len + 1) {
         std::cerr << "Syntax Error: Unexpected Symbol: " << symbol << "\n";
         return false;
       }

@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <utility>
 #include <iostream>
+#include <spdlog/spdlog.h>
 
 namespace grammar {
 using path = std::string;
@@ -50,7 +51,7 @@ class DFANode {
   node_t get_id();
   bool isAccept();
   bool isStart();
-  std::set<item_t> get_items();
+  std::set<item_t>& get_items();
   void add_items(std::set<item_t>);
   void add_next_node(symbol_t, DFANode *);
   std::map<symbol_t, DFANode *> get_next();

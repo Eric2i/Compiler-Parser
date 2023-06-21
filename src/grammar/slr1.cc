@@ -134,56 +134,86 @@ bool SLR1Parser::parse(std::vector<std::string> symbols) {
   std::stack<DFANode *> dfa_node_ptr_stk;
   dfa_node_ptr_stk.push(cur_node);
 
+  spdlog::info("Ready for Grammar Parsing...");
+  auto stack_report = [&dfa_node_ptr_stk] {
+    std::cerr << "Stack Report: ";
+    std::stack<DFANode *> tmp_stk = dfa_node_ptr_stk;
+    while (!tmp_stk.empty()) {
+      std::cerr << tmp_stk.top()->get_id() << " ";
+      tmp_stk.pop();
+    }
+    std::cerr << "\n";
+  };
+
+  stack_report();
+  spdlog::info("Start Parsing...");
+
   int i = 0;
   while (i < symbols.size() && !dfa_node_ptr_stk.empty()) {
     auto symbol = symbols[i];
+
     if (!inSymbolTable(symbol)) {
-      std::cerr << "Unknown Symbol Detected: " << symbol << "\n";
+      spdlog::error("Unknown Symbol {} Detected", symbol);
       return false;
     }
     cur_node = dfa_node_ptr_stk.top();
+    spdlog::info("Parsing Symbol: {} on State: [{}]", symbol, cur_node->get_id());
 
     if (cur_node->transit(symbol) != nullptr) {
       // shift operation
       dfa_node_ptr_stk.push(cur_node->transit(symbol));
+      spdlog::info("executing shifting operation! [{}] -{}-> [{}]", cur_node->get_id(), symbol, cur_node->transit(symbol)->get_id());
       i++;
     } else {
       // reduce operation
       int reduce_rule_id;
-      for (auto it = cur_node->get_items().begin(); it != cur_node->get_items().end(); it++) {
-        if (FOLLOW[this->rules[it->rule_id][0]].count(symbol_table[symbol]) > 0) {
-          reduce_rule_id = it->rule_id;
+      for (auto it: cur_node->get_items()) {
+//        spdlog::info("On State [{}] Scanning Rule: ", cur_node->get_id());
+//        print_rule(rules[it.rule_id]);
+        if (FOLLOW[this->rules[it.rule_id][0]].count(symbol_table[symbol]) > 0 && // symbol \in FOLLOW[LHS]
+               it.dot_pos == this->rules[it.rule_id].size()                     // dot at the end
+        ) {
+          reduce_rule_id = it.rule_id;
           break;
         }
       }
+      spdlog::info("executing reducing operation!");
+      print_rule(rules[reduce_rule_id]);
 
       auto reduce_rule_len = this->rules[reduce_rule_id].size() - 1; // length of RHS
-      if (dfa_node_ptr_stk.size() < reduce_rule_id + 1) {
+      if (dfa_node_ptr_stk.size() < reduce_rule_len + 1) {
         std::cerr << "Syntax Error: Unexpected Symbol: " << symbol << "\n";
         return false;
       }
-      for (int j = 0; j < reduce_rule_len; j++) {
+      for (int j = 0; j < reduce_rule_len; ++j) {
         dfa_node_ptr_stk.pop();
       }
 
       cur_node = dfa_node_ptr_stk.top();
       dfa_node_ptr_stk.push(cur_node->transit(this->id2sym[this->rules[reduce_rule_id][0]]));
     }
-    std::cerr << i << " : " << symbols[i] << std::endl;
+
+    stack_report();
   }
 
-  std::cerr << "ready for final reduction\n";
+//  spdlog::info("Final reducing Phase...");
 
   while (!dfa_node_ptr_stk.empty()) {
-    item_t item = *(dfa_node_ptr_stk.top()->get_items().begin());
-
+    cur_node = dfa_node_ptr_stk.top();
     int reduce_rule_id;
-    for (auto it = cur_node->get_items().begin(); it != cur_node->get_items().end(); it++) {
-      if (FOLLOW[this->rules[it->rule_id][0]].count(symbol_table[kEoi]) > 0) {
-        reduce_rule_id = it->rule_id;
+    for (auto it: cur_node->get_items()) {
+//      spdlog::info("On State [{}] Scanning Rule: ", cur_node->get_id());
+//      print_rule(rules[it.rule_id]);
+      if (FOLLOW[this->rules[it.rule_id][0]].count(symbol_table[kEoi]) > 0 && // symbol \in FOLLOW[LHS]
+          it.dot_pos == this->rules[it.rule_id].size()                     // dot at the end
+      ) {
+        reduce_rule_id = it.rule_id;
         break;
       }
     }
+
+    spdlog::info("executing reducing operation!");
+    print_rule(rules[reduce_rule_id]);
 
     int reduce_rule_len = this->rules[reduce_rule_id].size() - 1; // length of RHS
     for (int j = 0; j < reduce_rule_len; j++) {
@@ -196,6 +226,8 @@ bool SLR1Parser::parse(std::vector<std::string> symbols) {
       return true;
 
     dfa_node_ptr_stk.push(cur_node->transit(this->id2sym[this->rules[reduce_rule_id][0]]));
+
+    stack_report();
   }
 
   return false;

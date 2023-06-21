@@ -6,8 +6,8 @@
 using namespace std;
 
 int main() {
-  const grammar::path grammar_rules_file_path = "../test/grammar/input/LR0_rules.txt";
-  const grammar::path sample_tokens_file_path = "../test/grammar/input/LR0_rules_lang.txt";
+  const grammar::path grammar_rules_file_path = "../test/grammar/input/slr1_rules.txt";
+  const grammar::path sample_tokens_file_path = "../test/grammar/input/slr1_rules_lang.txt";
 
   // read grammar from .txt file
   grammar::SLR1Parser g(grammar_rules_file_path);

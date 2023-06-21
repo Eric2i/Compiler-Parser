@@ -44,7 +44,7 @@ bool DFANode::isStart() {
   return this->_isStart;
 }
 
-std::set<item_t> DFANode::get_items() {
+std::set<item_t>& DFANode::get_items() {
   return this->items;
 }
 
