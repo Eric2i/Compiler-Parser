@@ -1,16 +1,16 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
-#include "grammar.h"
+#include "src/include/grammar/ll1.h"
 
 using namespace std;
 
 int main() {
-    grammar::path RULES = "test/input/ll0_rules.txt";
-    grammar::path SRC = "test/input/ll0_rules_lang.txt";
+    grammar::path grammar_rules_file_path = "../test/grammar/input/ll0_rules.txt";
+    grammar::path sample_tokens_file_path = "../test/grammar/input/ll0_rules_lang.txt";
 
     // read grammar from .txt file
-    grammar::LL1Parser g(RULES);
+    grammar::LL1Parser g(grammar_rules_file_path);
 
     g.eliminate_left_recursion();
     g.left_factoring();
@@ -19,8 +19,8 @@ int main() {
     g.build_parsing_table();
     g.show();
 
-    // get pseudotokens from file
-    ifstream fin(SRC);
+    // get sample tokens from file
+    ifstream fin(sample_tokens_file_path);
     vector<string> tokens;
     string token;
     while(fin >> token) {
