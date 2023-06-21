@@ -3,8 +3,8 @@
 namespace grammar
 {
 
-    const std::string EOI = "$";
-    const std::string EPS = "<EPS>";
+    const std::string kEoi = "$";
+    const std::string kEps = "<EPS>";
 
     Grammar::Grammar(std::string filename)
     {
@@ -214,19 +214,19 @@ namespace grammar
         }
         print_section();
 
-        std::cerr << "Parsing Table:\n";
-        for (auto &p : this->parsing_table)
-        {
-            std::cerr << "(" << id2sym[p.first.first] << ","
-                      << id2sym[p.first.second] << ") -> "
-                      // std::cerr << "(" << p.first.first << ","
-                      // << p.first.second << ") -> "
-                      << p.second << ": ";
+//        std::cerr << "Parsing Table:\n";
+//        for (auto &p : this->parsing_table)
+//        {
+//            std::cerr << "(" << id2sym[p.first.first] << ","
+//                      << id2sym[p.first.second] << ") -> "
+//                      // std::cerr << "(" << p.first.first << ","
+//                      // << p.first.second << ") -> "
+//                      << p.second << ": ";
+//
+//            print_rule(rules[p.second]);
+//        }
 
-            print_rule(rules[p.second]);
-        }
-
-        print_line();
+//        print_line();
     }
 
     // DEBUG

@@ -5,8 +5,8 @@
 
 namespace grammar {
 
-const std::string EOI = "$";
-const std::string EPS = "<EPS>";
+const std::string kEoi = "$";
+const std::string kEps = "<EPS>";
 
 void LL1Parser::eliminate_left_recursion() {
   auto check = [&]() {
@@ -213,7 +213,7 @@ void LL1Parser::build_follow() {
   for (int id : nonterminals) {
     FOLLOW[id] = {};
   }
-  FOLLOW[S].insert(get_symbol_id(EOI)); // Follow of start symbol is $
+  FOLLOW[S].insert(get_symbol_id(kEoi)); // Follow of start symbol is $
 
   // Iterate until all follow sets are stable(unchanged)
   bool changed = true;
@@ -231,7 +231,7 @@ void LL1Parser::build_follow() {
           while (j < rule.size() && epsilon) {
             int C = rule[j];
             for (int c : FIRST[C]) {
-              if (c != get_symbol_id(EPS)) {
+              if (c != get_symbol_id(kEps)) {
                 if (FOLLOW[B].insert(c).second) {
                   changed = true;
                 }
@@ -239,7 +239,7 @@ void LL1Parser::build_follow() {
                 epsilon = true;
               }
             }
-            if (FIRST[C].count(get_symbol_id(EPS))) {
+            if (FIRST[C].count(get_symbol_id(kEps))) {
               j++;
             } else {
               epsilon = false;
@@ -263,7 +263,7 @@ void LL1Parser::build_parsing_table() {
   for (int r = 0; r < rules.size(); r++) {
     int nt = rules[r][0];
     for (int t : FIRST[rules[r][1]]) {
-      if (t != get_symbol_id(EPS)) {
+      if (t != get_symbol_id(kEps)) {
         parsing_table[{nt, t}] = r;
         // std::cerr << "inserting " << nt << id2sym[nt] << " " << t << " " << r << "\n";
       } else {
@@ -278,10 +278,10 @@ void LL1Parser::build_parsing_table() {
 
 bool LL1Parser::parse(std::vector<std::string> &input) {
   std::stack<int> stk;
-  stk.push(get_symbol_id(EOI));
+  stk.push(get_symbol_id(kEoi));
   stk.push(S);
 
-  input.push_back(EOI);
+  input.push_back(kEoi);
 
   for (int i = 0; i < input.size(); i++) {
     // output stk
@@ -332,7 +332,7 @@ bool LL1Parser::parse(std::vector<std::string> &input) {
       stk.pop();
       // push rules[action]-rhs to stk in reversed order
       for (int j = rules[prediction].size() - 1; j > 0; j--) {
-        if (get_symbol_id(EPS) != rules[prediction][j])
+        if (get_symbol_id(kEps) != rules[prediction][j])
           // ignore epsilon
           stk.push(rules[prediction][j]);
       }
